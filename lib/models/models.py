@@ -47,7 +47,7 @@ class InputAttention(nn.Module):
 
         Parameters
         -----
-        x: torch.tensor (bs, n, T)
+        x: torch.tensor (bs, T, n)
             Batch input sequence with T lags and n exogenous features.
 
         Output 
@@ -62,13 +62,14 @@ class InputAttention(nn.Module):
         x_tilde = torch.zeros((batch_size, self.m, self.T), device=x.device)
         prev_s = torch.zeros((batch_size, self.m), device=x.device)
         prev_h = torch.zeros((batch_size, self.m), device=x.device)
-
+        
+        print("encoder : ", x.shape)
         for t in range(self.T):    
             hs = torch.cat([prev_h, prev_s], dim=1) # (bs, 2*m)
             output_hs = self.W_e(hs) # (bs, T)
-            output_hs = output_hs[:, None, :].repeat(1, self.n, 1) # (bs, n, t)
-            output_x = self.U_e(x.permute(0, 2, 1)) # (bs, n, t)
-            tanh_sum = self.tanh(output_hs + output_x) # (bs, n, t)
+            output_hs = output_hs[:, None, :].repeat(1, self.n, 1) # (bs, n, T)
+            output_x = self.U_e(x.permute(0, 2, 1)) # (bs, T, n) -> (bs, n, T) -> (bs, n, T)
+            tanh_sum = self.tanh(output_hs + output_x) # (bs, n, T)
             e_t = torch.squeeze(self.V_e(tanh_sum), dim=-1) # (bs, n, 1)  ---> (bs, n)
             alpha_t = self.softmax(e_t) # (bs, n) weights  
             x_t_tilde = alpha_t * e_t 
@@ -81,6 +82,7 @@ class InputAttention(nn.Module):
             prev_h = h_t 
             prev_s = s_t 
         
+        print(x_tilde.shape)
         return x_tilde
 
 
@@ -133,7 +135,7 @@ class TemporalAttentionDecoder(nn.Module):
         Parameters
         -----
         x: torch.tensor (bs, m, T)
-            Batch input sequence with T lags and n exogenous features.
+            Batch input sequence with T timesteps and n exogenous features.
 
         y_known: torch.tensor (bs, T) 
             Batch of previous targets.
@@ -216,7 +218,7 @@ class DSARNN(nn.Module):
         Parameters
         -----
         x : torch.tensor 
-            (bs, n, T)  
+            (bs, T, n)  
         
         y_known : torch.tensor 
             (bs, T)
@@ -227,7 +229,6 @@ class DSARNN(nn.Module):
         out : torch.tensor 
             (bs, 1)
         """
-
         x1 = self.encoder(x) 
         out = self.decoder(x1, y_known) 
         return out 
