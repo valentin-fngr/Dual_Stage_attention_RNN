@@ -63,7 +63,6 @@ class InputAttention(nn.Module):
         prev_s = torch.zeros((batch_size, self.m), device=x.device)
         prev_h = torch.zeros((batch_size, self.m), device=x.device)
         
-        print("encoder : ", x.shape)
         for t in range(self.T):    
             hs = torch.cat([prev_h, prev_s], dim=1) # (bs, 2*m)
             output_hs = self.W_e(hs) # (bs, T)
@@ -82,7 +81,6 @@ class InputAttention(nn.Module):
             prev_h = h_t 
             prev_s = s_t 
         
-        print(x_tilde.shape)
         return x_tilde
 
 
@@ -163,7 +161,6 @@ class TemporalAttentionDecoder(nn.Module):
             c_t = torch.sum(beta * x, dim=2) # (bs, m) 
 
             y_tilde = self.W_tilde(torch.cat([y_known[:, t], c_t], dim=1)) # (bs, m+1) -> (bs, 1)
-
             d_t, s_t = self.LSTM(y_tilde, (prev_d, prev_s)) #(bs, p)
 
             # update 

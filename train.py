@@ -9,13 +9,12 @@ from tqdm import tqdm
 from lib.models.models import DARNN 
 from lib.data.data import get_data_and_preprocess
 from lib.utils.learning import AverageMeter
-from lib.utils.utils import get_config
+from lib.utils.utils import get_config, mape
 
 import numpy as np 
 import torch 
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader, TensorDataset
-
 
 
 
@@ -96,7 +95,7 @@ def train_epoch(args, opts, model, train_loader, criterion, optimizer, scheduler
         target = target.to(device)[:, None]  # future value
         preds = model(x, y_known)  # (bs, 1)
         loss = criterion(target, preds)
-        losses["train_RMSE_loss"].update(loss.item(), preds.shape[0])
+        losses["train_MSE_loss"].update(loss.item(), preds.shape[0])
         loss.backward()
         optimizer.step()    
     
@@ -107,7 +106,8 @@ def validate_epoch(
     val_loader, 
     criterion, 
     losses, 
-    epoch 
+    epoch, 
+    mode="val"
 ): 
     model.eval()
 
@@ -122,7 +122,14 @@ def validate_epoch(
             target = target.to(device)[:, None] # future value  
             preds = model(x, y_known) # (bs, 1)
             loss = criterion(target, preds)
-            losses["val_RMSE_loss"].update(loss.item(), preds.shape[0]) 
+
+            mae_loss = torch.nn.functional.l1_loss(target, preds)
+            mape_loss = mape(target, preds)
+
+            losses[f"{mode}_MSE_loss"].update(loss.item(), preds.shape[0]) 
+            losses[f"{mode}_MAE_loss"].update(mae_loss.item(), preds.shape[0])
+            losses[f"{mode}_RMSE_loss"].update(torch.sqrt(loss).item(), preds.shape[0])
+            losses[f"{mode}_MAPE_loss"].update(mape_loss.item(), preds.shape[0])
             
             gt.append(target.cpu().numpy())
             pred.append(preds.cpu().numpy())
@@ -159,16 +166,22 @@ def train_with_config(args, opts):
         print('Training epoch %d.' % epoch)
 
         losses = {}
-        losses["train_RMSE_loss"] = AverageMeter()
+        losses["train_MSE_loss"] = AverageMeter()
+        losses["val_MSE_loss"] = AverageMeter()
+        losses["val_MAE_loss"] = AverageMeter()
         losses["val_RMSE_loss"] = AverageMeter()
+        losses["val_MAPE_loss"] = AverageMeter()
+        losses["test_MSE_loss"] = AverageMeter()
+        losses["test_MAE_loss"] = AverageMeter()
         losses["test_RMSE_loss"] = AverageMeter()
+        losses["test_MAPE_loss"] = AverageMeter()
         train_epoch(args, opts, model, train_loader, criterion, optimizer, scheduler, losses, epoch) 
-        model, gt, pred = validate_epoch(args, opts, model, val_loader, criterion, losses, epoch)
+        model, gt, pred = validate_epoch(args, opts, model, val_loader, criterion, losses, epoch, mode="val")
         
         # logs
         lr = optimizer.param_groups[0]['lr']
-        train_writer.add_scalar("train_RMSE_loss", losses["train_RMSE_loss"].avg, epoch + 1)
-        train_writer.add_scalar("val_RMSE_loss", losses["val_RMSE_loss"].avg, epoch + 1)
+        train_writer.add_scalar("train_MSE_loss", losses["train_MSE_loss"].avg, epoch + 1)
+        train_writer.add_scalar("val_MSE_loss", losses["val_MSE_loss"].avg, epoch + 1)
         train_writer.add_scalar("lr", lr, epoch + 1)
         for i in range(len(gt)):
 
@@ -188,7 +201,26 @@ def train_with_config(args, opts):
             min_loss = losses["val_RMSE_loss"].avg
             save_checkpoint(chk_path_best, epoch, lr, optimizer, scheduler, model, min_loss)
 
+    print("[INFO] : Training done. ")
+    print("[INFO] : Performing inference on test data") 
+    model, gt, pred = validate_epoch(args, opts, model, test_loader, criterion, losses, epoch, mode="test")
+    for i in range(len(gt)):
+        train_writer.add_scalars(
+            "test_prediction", 
+            {
+                "gt": gt[i], 
+                "pred": pred[i]
+            }, 
+            i
+        )
 
+
+    train_writer.add_scalar("test_MSE_loss", losses["test_MSE_loss"].avg, 0)
+    train_writer.add_scalar("test_MAE_loss", losses["test_MAE_loss"].avg, 0)
+    train_writer.add_scalar("test_RMSE_loss", losses["test_RMSE_loss"].avg, 0)
+    train_writer.add_scalar("test_MAPE_loss", losses["test_MAPE_loss"].avg, 0)
+
+    
 
 def set_random_seed(seed):
     random.seed(seed)
