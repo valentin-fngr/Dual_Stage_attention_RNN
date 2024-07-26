@@ -6,7 +6,7 @@ import time
 import copy 
 from tqdm import tqdm 
 
-from lib.models.models import DSARNN 
+from lib.models.models import DARNN 
 from lib.data.data import get_data_and_preprocess
 from lib.utils.learning import AverageMeter
 from lib.utils.utils import get_config
@@ -58,7 +58,7 @@ def get_dataloader(args):
 
 
 def get_model(args): 
-    model = DSARNN(
+    model = DARNN(
         T = args.timesteps, 
         m = args.m_dim, 
         p = args.p_dim, 

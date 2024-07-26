@@ -176,7 +176,7 @@ class TemporalAttentionDecoder(nn.Module):
         return out2
 
 
-class DSARNN(nn.Module): 
+class DARNN(nn.Module): 
     """
     A Complete implementation of Dual-stage attention RNN . 
 
