@@ -154,7 +154,7 @@ class TemporalAttentionDecoder(nn.Module):
             output_ds = self.W_d(ds)[:, None, :].repeat(1, self.T, 1) #(bs, T, m)
             output_x = self.U_d(x.permute(0, 2, 1)) # (bs, m, T) -> (bs, T, m) -> (bs, T, m)
             tanh_sum = self.tanh(output_ds + output_x) # (bs, T, m) 
-            l_t = torch.squeeze(self.V_d(tanh_sum)) # (bs, T, 1) -> (bs, T)
+            l_t = torch.squeeze(self.V_d(tanh_sum), dim=2) # (bs, T, 1) -> (bs, T)
 
             # NOTE : not necessary to repeat, prefered for clarity at first. 
             beta = self.softmax(l_t)[:, None, :].repeat(1, self.p, 1) # (bs, T) -> (bs, 1, T) -> (bs, p, T)
