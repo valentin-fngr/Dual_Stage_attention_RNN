@@ -35,16 +35,21 @@ def get_data_and_preprocess(
     
     train_length = int(len(data) * train_split)
     val_length = int(len(data) * val_split)
+    test_length = int(len(data) * (1 - train_split - val_split))
+
+    print("TRAIN LENGTH : ", train_length)
+    print("VAL LENGTH : ", val_length)
+    print("TEST LENGTH : ", test_length)
 
     X_train = X[:train_length]
     y_his_train = y[:train_length]
     X_val = X[train_length:train_length+val_length]
     y_his_val = y[train_length:train_length+val_length]
-    X_test = X[-val_length:]
-    y_his_test = y[-val_length:]
+    X_test = X[train_length+val_length:]
+    y_his_test = y[train_length+val_length:]
     target_train = target[:train_length]
     target_val = target[train_length:train_length+val_length]
-    target_test = target[-val_length:]
+    target_test = target[train_length+val_length:]
 
     # min max scaling 
     X_train_max = X_train.max(axis=0)
