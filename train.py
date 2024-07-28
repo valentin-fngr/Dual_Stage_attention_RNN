@@ -9,7 +9,7 @@ from tqdm import tqdm
 from lib.models.models import DARNN 
 from lib.data.data import get_data_and_preprocess
 from lib.utils.learning import AverageMeter
-from lib.utils.utils import get_config, mape
+from lib.utils.utils import get_config, mape, EarlyStopper
 
 import numpy as np 
 import torch 
@@ -75,7 +75,7 @@ def get_criterion(args):
 
 
 def lr_lambda(iteration):
-    return 0.9 ** (iteration // 10000)
+    return 0.9 ** (iteration // 25)
 
 
 def get_optimizer(args, model): 
@@ -143,6 +143,12 @@ def validate_epoch(
 
 def train_with_config(args, opts): 
 
+    experiment_path = os.path.join("./experiments")
+    if not os.path.exists(experiment_path): 
+        os.mkdir(experiment_path)
+
+    opts.checkpoint = os.path.join(experiment_path, opts.checkpoint)
+
     try: 
         os.mkdir(opts.checkpoint)
     except OSError as e: 
@@ -162,6 +168,8 @@ def train_with_config(args, opts):
         model_params = model_params + parameter.numel()
     print('INFO: Trainable parameter count:', model_params)
 
+    early_stopper = EarlyStopper(patience=16, min_delta=0.05)
+
     for epoch in tqdm(range(args.epochs)): 
         print('Training epoch %d.' % epoch)
 
@@ -177,6 +185,7 @@ def train_with_config(args, opts):
         losses["test_MAPE_loss"] = AverageMeter()
         train_epoch(args, opts, model, train_loader, criterion, optimizer, scheduler, losses, epoch) 
         model, gt, pred = validate_epoch(args, opts, model, val_loader, criterion, losses, epoch, mode="val")
+        scheduler.step()
         
         # logs
         lr = optimizer.param_groups[0]['lr']
@@ -196,6 +205,9 @@ def train_with_config(args, opts):
         chk_path_latest = os.path.join(opts.checkpoint, 'latest_epoch.bin')
         chk_path_best = os.path.join(opts.checkpoint, 'best_epoch.bin'.format(epoch))
 
+        if early_stopper.early_stop(losses["val_MSE_loss"].avg):             
+            break
+
         save_checkpoint(chk_path_latest, epoch, lr, optimizer, scheduler, model, min_loss)
         if losses["val_RMSE_loss"].avg < min_loss: 
             min_loss = losses["val_RMSE_loss"].avg
@@ -213,7 +225,6 @@ def train_with_config(args, opts):
             }, 
             i
         )
-
 
     train_writer.add_scalar("test_MSE_loss", losses["test_MSE_loss"].avg, 0)
     train_writer.add_scalar("test_MAE_loss", losses["test_MAE_loss"].avg, 0)
