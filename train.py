@@ -75,7 +75,7 @@ def get_criterion(args):
 
 
 def lr_lambda(iteration):
-    return 0.9 ** (iteration // 25)
+    return 0.9 ** (iteration // 20)
 
 
 def get_optimizer(args, model): 
