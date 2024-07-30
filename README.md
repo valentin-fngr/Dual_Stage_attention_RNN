@@ -19,17 +19,14 @@ This repository contains an implementation of a **Transformer-based Framework** 
 1. Clone the repository:
    ```bash
    git clone https://github.com/valentin-fngr/Dual_Stage_attention_RNN.git
-   cd model-prediction
 
 2. Install the required packages: 
     ```bash 
     pip install -r requirements.txt
 
-
 ## Usage
 
 The train.py script accepts the following command-line arguments:
-
 
     --config: Path to the configuration file.
     --checkpoint: Directory to save checkpoints.
