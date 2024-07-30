@@ -30,5 +30,4 @@ The train.py script accepts the following command-line arguments:
 
     --config: Path to the configuration file.
     --checkpoint: Directory to save checkpoints.
-    --finetune: Path to a checkpoint to fine-tune from.
     --seed: Random seed for reproducibility (default: 0).
