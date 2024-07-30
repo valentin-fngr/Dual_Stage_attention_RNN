@@ -1,15 +1,14 @@
-# A Transformer-Based Framework for Multivariate Time Series Representation Learning
+# DA-RNN Implementation
 
 ## Overview
 
-This repository contains an implementation of a **Transformer-based Framework** designed for **Multivariate Time Series Representation Learning**. This framework leverages the power of Transformer models to effectively capture complex patterns and dependencies in multivariate time series data.
+This repository contains an implementation of the **DA-RNN (Dual Attention Recurrent Neural Network)**. DA-RNN is a sophisticated model designed for time series forecasting. It leverages both temporal and contextual attention mechanisms to enhance predictive accuracy.
 
 ## Key Features
 
-- **Transformer Architecture**: Utilizes self-attention mechanisms to capture long-range dependencies and complex relationships within the data.
-- **Multivariate Time Series Processing**: Designed to handle and learn from multiple time series variables simultaneously.
-- **Enhanced Representation Learning**: Improves the quality of learned representations, leading to better performance on downstream tasks such as forecasting, classification, and anomaly detection.
-
+- **Temporal Attention Mechanism**: Focuses on the significance of different time steps in the sequence.
+- **Contextual Attention Mechanism**: Captures long-term dependencies and contextual relationships.
+- **Improved Predictive Accuracy**: Better captures complex patterns in sequential data.
 ## Prerequisites
 
 - Python 3.x
@@ -19,6 +18,7 @@ This repository contains an implementation of a **Transformer-based Framework** 
 1. Clone the repository:
    ```bash
    git clone https://github.com/valentin-fngr/Dual_Stage_attention_RNN.git
+   cd Dual_Stage_attention_RNN
 
 2. Install the required packages: 
     ```bash 
