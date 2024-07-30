@@ -11,6 +11,6 @@ p_dim: 64
 num_exogenous: 81
 
 lr: 0.001
-train_split: 0.75
-val_split: 0.15
+train_split: 0.87
+val_split: 0.06
 

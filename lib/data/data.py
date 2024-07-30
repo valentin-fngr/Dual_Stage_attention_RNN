@@ -81,7 +81,7 @@ def get_data_and_preprocess(
     target_val_t = torch.Tensor(target_val)
     target_test_t = torch.Tensor(target_test)
 
-    return [
+    data =  [
         X_train_t,
         X_val_t,
         X_test_t,
@@ -92,4 +92,8 @@ def get_data_and_preprocess(
         target_val_t,
         target_test_t
     ]
+
+    scale = (target_train_max, target_train_min)
+
+    return data, scale
 

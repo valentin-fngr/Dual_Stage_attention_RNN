@@ -48,12 +48,12 @@ def save_checkpoint(chk_path, epoch, lr, optimizer, scheduler, model, min_loss):
 
 def get_dataloader(args): 
      
-    data = get_data_and_preprocess(args.csv_file, args.target, args.timesteps, args.train_split, args.val_split) 
+    data, scale = get_data_and_preprocess(args.csv_file, args.target, args.timesteps, args.train_split, args.val_split) 
     X_train_t, X_val_t, X_test_t, y_his_train_t, y_his_val_t, y_his_test_t, target_train_t, target_val_t, target_test_t,  = data
     train_loader = DataLoader(TensorDataset(X_train_t, y_his_train_t, target_train_t), shuffle=True, batch_size=args.batch_size)
     val_loader = DataLoader(TensorDataset(X_val_t, y_his_val_t, target_val_t), shuffle=False, batch_size=args.batch_size)
     test_loader = DataLoader(TensorDataset(X_test_t, y_his_test_t, target_test_t), shuffle=False, batch_size=args.batch_size)
-    return train_loader, val_loader, test_loader 
+    return train_loader, val_loader, test_loader, scale 
 
 
 def get_model(args): 
@@ -107,9 +107,14 @@ def validate_epoch(
     criterion, 
     losses, 
     epoch, 
-    mode="val"
+    mode="val", 
+    scale=None
 ): 
     model.eval()
+
+    if scale:
+        target_train_max, target_train_min = scale
+    
 
     pred, gt = [], []
 
@@ -119,8 +124,12 @@ def validate_epoch(
             
             x = x.to(device) # exogenous [X1, ..., Xt-1]
             y_known = y_known.to(device) # observed target [y1, ..., yt-1]
-            target = target.to(device)[:, None] # future value  
-            preds = model(x, y_known) # (bs, 1)
+            if scale:
+                target = target.to(device)[:, None]*(target_train_max - target_train_min) + target_train_min
+                preds = model(x, y_known) *(target_train_max - target_train_min) + target_train_min
+            else: 
+                target = target.to(device)[:, None] 
+                preds = model(x, y_known) # (bs, 1)
             loss = criterion(target, preds)
 
             mae_loss = torch.nn.functional.l1_loss(target, preds)
@@ -157,7 +166,7 @@ def train_with_config(args, opts):
         
     train_writer = SummaryWriter(os.path.join(opts.checkpoint, "logs"))
 
-    train_loader, val_loader, test_loader = get_dataloader(args)
+    train_loader, val_loader, test_loader, scale = get_dataloader(args)
     model = get_model(args)
     criterion = get_criterion(args)
     optimizer, scheduler = get_optimizer(args, model)
@@ -184,7 +193,7 @@ def train_with_config(args, opts):
         losses["test_RMSE_loss"] = AverageMeter()
         losses["test_MAPE_loss"] = AverageMeter()
         train_epoch(args, opts, model, train_loader, criterion, optimizer, scheduler, losses, epoch) 
-        model, gt, pred = validate_epoch(args, opts, model, val_loader, criterion, losses, epoch, mode="val")
+        model, gt, pred = validate_epoch(args, opts, model, val_loader, criterion, losses, epoch, mode="val", scale=scale)
         scheduler.step()
         
         # logs
@@ -215,7 +224,7 @@ def train_with_config(args, opts):
 
     print("[INFO] : Training done. ")
     print("[INFO] : Performing inference on test data") 
-    model, gt, pred = validate_epoch(args, opts, model, test_loader, criterion, losses, epoch, mode="test")
+    model, gt, pred = validate_epoch(args, opts, model, test_loader, criterion, losses, epoch, mode="test", scale=scale)
     for i in range(len(gt)):
         train_writer.add_scalars(
             "test_prediction", 
